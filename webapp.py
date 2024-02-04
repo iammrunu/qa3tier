@@ -1,77 +1,84 @@
-import xml.etree.ElementTree as ET
-import mysql.connector
+from flask import Flask, render_template, Response, request
+from xml.etree.ElementTree import Element, SubElement, tostring
+from xml.dom import minidom
+import os
+from datetime import datetime
 
-# Load XML data from a file
-xml_file_path = 'downloads\generated_xml_20240203004342.xml'
-tree = ET.parse(xml_file_path)
-root = tree.getroot()
+app = Flask(__name__)
 
-# Connect to MySQL database
-db_connection = mysql.connector.connect(
-    host="127.0.0.1",
-    user="root",
-    password="Aksh@123",
-    database="dev"
-)
-cursor = db_connection.cursor()
+@app.route('/', methods=['GET', 'POST'])
+def generate_xml():
+    if request.method == 'POST':
+        # Get form values from the submitted form
+        accident_id = request.form.get('id')
+        accident_date = request.form.get('date')
+        city = request.form.get('location_city')
+        state = request.form.get('location_state')
+        license_plate = request.form.get('license_plate')
+        make = request.form.get('make')
+        model = request.form.get('model')
+        name = request.form.get('name')
+        age = request.form.get('age')
+        gender = request.form.get('gender')
+        description = request.form.get('description')
+        severity = request.form.get('severity')
+    else:
+        # If the form is not submitted, set values to empty strings
+        accident_id = ''
+        accident_date = ''
+        city = ''
+        state = ''
+        license_plate = ''
+        make = ''
+        model = ''
+        name = ''
+        age = ''
+        gender = ''
+        description = ''
+        severity = ''
 
-# Create a table for accident records if not exists
-create_table_query = '''
-CREATE TABLE IF NOT EXISTS accidents (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    date DATE,
-    location_city VARCHAR(255),
-    location_state VARCHAR(255),
-    description VARCHAR(255),
-    severity VARCHAR(50),
-    make VARCHAR(50),
-    model VARCHAR(50),
-    name VARCHAR(100),
-    age INT,
-    gender VARCHAR(10),
-    license_plate VARCHAR(20)
-)
-'''
-cursor.execute(create_table_query)
+    accidents = Element("accidents")
 
-# Iterate through each accident record and insert into the database
-for accident in root.findall('accident'):
-    date = accident.find('date').text
-    location_city = accident.find('location/city').text
-    location_state = accident.find('location/state').text
-    description = accident.find('details/description').text
-    severity = accident.find('details/severity').text
+    # Create accident element
+    accident = SubElement(accidents, "accident")
+    SubElement(accident, "id").text = accident_id
+    SubElement(accident, "date").text = accident_date
 
-    vehicles_data = []
-    individuals_data = []
+    # Create location element
+    location = SubElement(accident, "location")
+    SubElement(location, "city").text = city
+    SubElement(location, "state").text = state
 
-    # Iterate through vehicles and collect data
-    for vehicle in accident.findall('vehicles/vehicle'):
-        make = vehicle.find('make').text
-        model = vehicle.find('model').text
-        license_plate = vehicle.find('license_plate').text
-        vehicles_data.append((make, model, license_plate))
+    # Create vehicles element
+    vehicles = SubElement(accident, "vehicles")
+    vehicle = SubElement(vehicles, "vehicle")
+    SubElement(vehicle, "license_plate").text = license_plate
+    SubElement(vehicle, "make").text = make
+    SubElement(vehicle, "model").text = model
 
-    # Iterate through individuals and collect data
-    for person in accident.findall('individuals/person'):
-        name = person.find('name').text
-        age = person.find('age').text
-        gender = person.find('gender').text
-        individuals_data.append((name, age, gender))
+    # Create individuals element
+    individuals = SubElement(accident, "individuals")
+    person = SubElement(individuals, "person")
+    SubElement(person, "name").text = name
+    SubElement(person, "age").text = age
+    SubElement(person, "gender").text = gender
 
-    # Example SQL query for inserting accident and related vehicles and persons
-    insert_query = '''
-    INSERT INTO accidents (date, location_city, location_state, description, severity, make, model, license_plate, name, age, gender)
-    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-    '''
+    # Create details element
+    details = SubElement(accident, "details")
+    SubElement(details, "description").text = description
+    SubElement(details, "severity").text = severity
 
-    # Combine all data for the accident
-    values = [(date, location_city, location_state, description, severity, *vehicle_data, *individual_data)
-              for vehicle_data in vehicles_data for individual_data in individuals_data]
+    xml_str = minidom.parseString(tostring(accidents)).toprettyxml(indent="    ")
 
-    cursor.executemany(insert_query, values)
+    # Save the XML content to a file with a timestamp
+    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+    filename = f'generated_xml_latest.xml'
+    filepath = os.path.join('downloads', filename)
 
-# Commit the changes and close connections
-db_connection.commit()
-cursor.close()
-db_connection.close()
+    with open(filepath, 'w') as file:
+        file.write(xml_str)
+
+    return render_template('index.html', xml_str=xml_str)
+
+if __name__ == '__main__':
+    app.run(debug=True)
