@@ -1,84 +1,67 @@
-from flask import Flask, render_template, Response, request
-from xml.etree.ElementTree import Element, SubElement, tostring
-from xml.dom import minidom
-import os
-from datetime import datetime
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accident Data Feeder</title>
+    <!-- Include flatpickr stylesheet -
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 
-app = Flask(__name__)
+    <!-- Include flatpickr JavaScript library -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+</head>
+<body>
+    <form method="post" action="/">
+       <!-- <label for="id">ID:</label>
+        <input type="text" id="id" name="id" value="{{ request.form.get('id', '') }}"><br> -->
 
-@app.route('/', methods=['GET', 'POST'])
-def generate_xml():
-    if request.method == 'POST':
-        # Get form values from the submitted form
-        accident_id = request.form.get('id')
-        accident_date = request.form.get('date')
-        city = request.form.get('location_city')
-        state = request.form.get('location_state')
-        license_plate = request.form.get('license_plate')
-        make = request.form.get('make')
-        model = request.form.get('model')
-        name = request.form.get('name')
-        age = request.form.get('age')
-        gender = request.form.get('gender')
-        description = request.form.get('description')
-        severity = request.form.get('severity')
-    else:
-        # If the form is not submitted, set values to empty strings
-        accident_id = ''
-        accident_date = ''
-        city = ''
-        state = ''
-        license_plate = ''
-        make = ''
-        model = ''
-        name = ''
-        age = ''
-        gender = ''
-        description = ''
-        severity = ''
+        <label for="date">Date:</label>
+        <input type="text" id="date" name="date" value="{{ request.form.get('date', '') }}"><br>
 
-    accidents = Element("accidents")
+        <label for="location_city">Location City:</label>
+        <input type="text" id="location_city" name="location_city" value="{{ request.form.get('location_city', '') }}"><br>
 
-    # Create accident element
-    accident = SubElement(accidents, "accident")
-    SubElement(accident, "id").text = accident_id
-    SubElement(accident, "date").text = accident_date
+        <label for="location_state">Location State:</label>
+        <input type="text" id="location_state" name="location_state" value="{{ request.form.get('location_state', '') }}"><br>
 
-    # Create location element
-    location = SubElement(accident, "location")
-    SubElement(location, "city").text = city
-    SubElement(location, "state").text = state
+        <label for="description">Description:</label>
+        <input type="text" id="description" name="description" value="{{ request.form.get('description', '') }}"><br>
 
-    # Create vehicles element
-    vehicles = SubElement(accident, "vehicles")
-    vehicle = SubElement(vehicles, "vehicle")
-    SubElement(vehicle, "license_plate").text = license_plate
-    SubElement(vehicle, "make").text = make
-    SubElement(vehicle, "model").text = model
+        <label for="severity">Severity:</label>
+        <input type="text" id="severity" name="severity" value="{{ request.form.get('severity', '') }}"><br>
 
-    # Create individuals element
-    individuals = SubElement(accident, "individuals")
-    person = SubElement(individuals, "person")
-    SubElement(person, "name").text = name
-    SubElement(person, "age").text = age
-    SubElement(person, "gender").text = gender
+        <label for="make">Make:</label>
+        <input type="text" id="make" name="make" value="{{ request.form.get('make', '') }}"><br>
 
-    # Create details element
-    details = SubElement(accident, "details")
-    SubElement(details, "description").text = description
-    SubElement(details, "severity").text = severity
+        <label for="model">Model:</label>
+        <input type="text" id="model" name="model" value="{{ request.form.get('model', '') }}"><br>
 
-    xml_str = minidom.parseString(tostring(accidents)).toprettyxml(indent="    ")
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name" value="{{ request.form.get('name', '') }}"><br>
 
-    # Save the XML content to a file with a timestamp
-    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    filename = f'generated_xml_latest.xml'
-    filepath = os.path.join('downloads', filename)
+        <label for="age">Age:</label>
+        <input type="text" id="age" name="age" value="{{ request.form.get('age', '') }}"><br>
 
-    with open(filepath, 'w') as file:
-        file.write(xml_str)
+        <label for="gender">Gender:</label>
+        <input type="text" id="gender" name="gender" value="{{ request.form.get('gender', '') }}"><br>
 
-    return render_template('index.html', xml_str=xml_str)
+        <label for="license_plate">License Plate:</label>
+        <input type="text" id="license_plate" name="license_plate" value="{{ request.form.get('license_plate', '') }}"><br>
 
-if __name__ == '__main__':
-    app.run(debug=True)
+        <button type="submit">Generate XML</button>
+    </form>
+        <!-- Include flatpickr initialization script -->
+        <script>
+            flatpickr("#date", {
+                dateFormat: "Y-m-d",  // Set the desired date format
+            });
+        </script>
+
+    {% if xml_str %}
+        <hr>
+        <h3>Generated XML:</h3>
+        <a href="{{ url_for('generate_xml') }}">Download XML</a>
+        <pre>{{ xml_str | safe }}</pre>
+    {% endif %}
+</body>
+</html>
